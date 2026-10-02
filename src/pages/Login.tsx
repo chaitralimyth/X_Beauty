@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { api } from '@/lib/api';
 import { Link } from 'react-router-dom';
 import { Lock, Mail, Eye, EyeOff, Loader2 } from 'lucide-react';
 import SEO from '@/components/SEO';
@@ -9,19 +10,43 @@ const Login = () => {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    if (!formData.email || !formData.password) {
-      setError('Please enter both email and password.');
-      return;
-    }
-    setSubmitting(true);
-    setTimeout(() => {
-      setSubmitting(false);
-      setError('This is a frontend-only login page. Authentication is not implemented. Please connect a backend to enable staff login.');
-    }, 1200);
-  };
+  const handleSubmit = async (e: React.FormEvent) => {
+      e.preventDefault();
+
+      setError('');
+
+      if (!formData.email || !formData.password) {
+        setError('Please enter both email and password.');
+        return;
+      }
+
+      setSubmitting(true);
+
+      try {
+        const data = await api.login(
+          formData.email,
+          formData.password
+        );
+
+        localStorage.setItem('x_beauty_token', data.access_token);
+        localStorage.setItem(
+          'x_beauty_user',
+          JSON.stringify(data.user)
+        );
+
+        window.location.href = '/admin';
+      } catch (error) {
+        console.error('Login error:', error);
+
+        setError(
+          error instanceof Error
+            ? error.message
+            : 'Invalid email or password.'
+        );
+      } finally {
+        setSubmitting(false);
+      }
+    };
 
   return (
     <>
@@ -108,7 +133,7 @@ const Login = () => {
             </div>
 
             <p className="text-xs text-neutral-400 text-center mt-6">
-              This is a frontend-only login page. No authentication is performed. Connect a backend to enable secure staff access.
+              Staff authentication is handled securely by the X Beauty backend.
             </p>
           </div>
         </div>

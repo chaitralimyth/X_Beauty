@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { api } from '@/lib/api';
 import { CheckCircle2, Loader2, Send } from 'lucide-react';
 import SEO from '@/components/SEO';
 import PageHeader from '@/components/PageHeader';
@@ -36,15 +37,26 @@ const Contact = () => {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!validate()) return;
-    setSubmitting(true);
-    setTimeout(() => {
-      setSubmitting(false);
-      setSubmitted(true);
-    }, 1000);
-  };
+  const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  if (!validate()) return;
+  setSubmitting(true);
+
+  try {
+    await api.createMessage(formData);
+    setSubmitted(true);
+  } catch (error) {
+    console.error('Contact form error:', error);
+
+    alert(
+      error instanceof Error
+        ? error.message
+        : 'Unable to send your message. Please try again.'
+    );
+  } finally {
+    setSubmitting(false);
+  }
+};
 
   return (
     <>

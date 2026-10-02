@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { api } from '@/lib/api';
 import { CheckCircle2, Loader2, Calendar } from 'lucide-react';
 import SEO from '@/components/SEO';
 import PageHeader from '@/components/PageHeader';
@@ -55,15 +56,26 @@ const Booking = () => {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!validate()) return;
-    setSubmitting(true);
-    setTimeout(() => {
-      setSubmitting(false);
-      setSubmitted(true);
-    }, 1200);
-  };
+  const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  if (!validate()) return;
+  setSubmitting(true);
+
+  try {
+    await api.createBooking(formData);
+    setSubmitted(true);
+  } catch (error) {
+    console.error('Booking error:', error);
+
+    alert(
+      error instanceof Error
+        ? error.message
+        : 'Unable to submit booking. Please try again.'
+    );
+  } finally {
+    setSubmitting(false);
+  }
+};
 
   if (submitted) {
     return (
@@ -267,7 +279,8 @@ const Booking = () => {
             </button>
 
             <p className="text-xs text-neutral-400 text-center">
-              This is a frontend-only request form. No data is stored. X Beauty will contact you to confirm.
+               Your appointment request will be securely submitted to X Beauty.
+              We will contact you to confirm your appointment.
             </p>
           </form>
 
