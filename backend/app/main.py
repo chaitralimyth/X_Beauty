@@ -1,3 +1,4 @@
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -23,23 +24,42 @@ app = FastAPI(
 )
 
 
+from .chakravyuh_integration import ChakravyuhSentinelMiddleware
+
 # =========================
-# CORS
+# SECURITY & CORS MIDDLEWARE
 # =========================
 
+# Chakravyuh Sentinel Security Integration Layer
+app.add_middleware(ChakravyuhSentinelMiddleware)
+
+# CORS Configuration:
+# - Local development explicitly supports Vite & Next frontend origins (5173, 3000)
+# - Production origins are configurable via CORS_ORIGINS environment variable
+# - Never use "*" together with allow_credentials=True (prohibited by W3C CORS spec)
+DEFAULT_CORS_ORIGINS = [
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
+env_cors = os.getenv("CORS_ORIGINS", "")
+if env_cors.strip():
+    ALLOWED_CORS_ORIGINS = [
+        origin.strip()
+        for origin in env_cors.split(",")
+        if origin.strip() and origin.strip() != "*"
+    ]
+else:
+    ALLOWED_CORS_ORIGINS = DEFAULT_CORS_ORIGINS
+
+# Outermost middleware handles CORS for browser clients
 app.add_middleware(
     CORSMiddleware,
-
-    allow_origins=[
-        "http://localhost:5173",
-        "http://127.0.0.1:5173"
-    ],
-
+    allow_origins=ALLOWED_CORS_ORIGINS,
     allow_credentials=True,
-
-    allow_methods=["*"],
-
-    allow_headers=["*"]
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allow_headers=["*"],
 )
 
 
