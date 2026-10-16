@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
-import { CheckCircle2, Loader2, Calendar } from 'lucide-react';
+import { CheckCircle2, Loader2, Calendar, AlertCircle } from 'lucide-react';
 import SEO from '@/components/SEO';
 import PageHeader from '@/components/PageHeader';
 import { services, stylists, business } from '@/data/content';
@@ -30,10 +30,55 @@ const Booking = () => {
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [serverError, setServerError] = useState<string | null>(null);
+  const [isWakingUp, setIsWakingUp] = useState(false);
 
-  const allServiceOptions = services.flatMap((s) =>
-    s.items.map((item) => ({ label: `${item.name} (${s.shortTitle})`, value: `${s.shortTitle} — ${item.name}` }))
+  const [serviceOptions, setServiceOptions] = useState(() =>
+    services.flatMap((s) =>
+      s.items.map((item) => ({ label: `${item.name} (${s.shortTitle})`, value: `${s.shortTitle} — ${item.name}` }))
+    )
   );
+
+  const [stylistOptions, setStylistOptions] = useState(() =>
+    stylists.map((s) => ({ name: s.name, label: `${s.name} — ${s.specialty}` }))
+  );
+
+  useEffect(() => {
+    let isMounted = true;
+    api.getServices()
+      .then((data) => {
+        if (!isMounted || !Array.isArray(data) || data.length === 0) return;
+        const opts = data.map((item) => ({
+          label: `${item.name} (${item.category})`,
+          value: `${item.category} — ${item.name}`,
+        }));
+        setServiceOptions((prev) => {
+          const existing = new Set(prev.map((o) => o.value));
+          const additions = opts.filter((o) => !existing.has(o.value));
+          return [...prev, ...additions];
+        });
+      })
+      .catch(() => {});
+
+    api.getStylists()
+      .then((data) => {
+        if (!isMounted || !Array.isArray(data) || data.length === 0) return;
+        const opts = data.map((s) => ({
+          name: s.name,
+          label: `${s.name} — ${s.specialty}`,
+        }));
+        setStylistOptions((prev) => {
+          const existing = new Set(prev.map((s) => s.name.toLowerCase()));
+          const additions = opts.filter((s) => !existing.has(s.name.toLowerCase()));
+          return [...prev, ...additions];
+        });
+      })
+      .catch(() => {});
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const validate = (): boolean => {
     const e: FormErrors = {};
@@ -57,25 +102,32 @@ const Booking = () => {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  if (!validate()) return;
-  setSubmitting(true);
+    e.preventDefault();
+    setServerError(null);
+    if (!validate()) return;
+    setSubmitting(true);
+    setIsWakingUp(false);
 
-  try {
-    await api.createBooking(formData);
-    setSubmitted(true);
-  } catch (error) {
-    console.error('Booking error:', error);
+    const wakeTimer = setTimeout(() => {
+      setIsWakingUp(true);
+    }, 4000);
 
-    alert(
-      error instanceof Error
-        ? error.message
-        : 'Unable to submit booking. Please try again.'
-    );
-  } finally {
-    setSubmitting(false);
-  }
-};
+    try {
+      await api.createBooking(formData);
+      setSubmitted(true);
+    } catch (error) {
+      console.error('Booking error:', error);
+      setServerError(
+        error instanceof Error
+          ? error.message
+          : 'Unable to submit booking. Please try again.'
+      );
+    } finally {
+      clearTimeout(wakeTimer);
+      setIsWakingUp(false);
+      setSubmitting(false);
+    }
+  };
 
   if (submitted) {
     return (
@@ -128,6 +180,25 @@ const Booking = () => {
       <section className="section-pad">
         <div className="container-x max-w-3xl">
           <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-sm p-8 md:p-10 space-y-6" noValidate>
+            {serverError && (
+              <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl p-4 flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="font-medium">Booking Request Could Not Be Submitted</p>
+                  <p className="mt-1 text-red-600">{serverError}</p>
+                </div>
+              </div>
+            )}
+
+            {isWakingUp && (
+              <div className="bg-amber-50 border border-amber-200 text-amber-800 text-sm rounded-xl p-4 flex items-start gap-3">
+                <Loader2 className="w-5 h-5 text-amber-600 animate-spin flex-shrink-0 mt-0.5" />
+                <p>
+                  Connecting to backend server on Render... Waking up from sleep mode may take a few moments.
+                </p>
+              </div>
+            )}
+
             <div className="grid sm:grid-cols-2 gap-5">
               <div>
                 <label className="label-field" htmlFor="fullName">Full Name *</label>
@@ -180,7 +251,7 @@ const Booking = () => {
                   aria-invalid={!!errors.service}
                 >
                   <option value="">Select a service</option>
-                  {allServiceOptions.map((opt) => (
+                  {serviceOptions.map((opt) => (
                     <option key={opt.value} value={opt.value}>{opt.label}</option>
                   ))}
                 </select>
@@ -195,8 +266,8 @@ const Booking = () => {
                   onChange={(e) => handleChange('stylist', e.target.value)}
                 >
                   <option value="">No preference</option>
-                  {stylists.map((s) => (
-                    <option key={s.name} value={s.name}>{s.name} — {s.specialty}</option>
+                  {stylistOptions.map((s) => (
+                    <option key={s.name} value={s.name}>{s.label}</option>
                   ))}
                 </select>
               </div>

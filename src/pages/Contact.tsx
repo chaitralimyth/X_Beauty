@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { api } from '@/lib/api';
-import { CheckCircle2, Loader2, Send } from 'lucide-react';
+import { CheckCircle2, Loader2, Send, AlertCircle } from 'lucide-react';
 import SEO from '@/components/SEO';
 import PageHeader from '@/components/PageHeader';
 import LocationSection from '@/components/LocationSection';
@@ -18,6 +18,8 @@ const Contact = () => {
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [serverError, setServerError] = useState<string | null>(null);
+  const [isWakingUp, setIsWakingUp] = useState(false);
 
   const validate = (): boolean => {
     const e: FormErrors = {};
@@ -38,25 +40,32 @@ const Contact = () => {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  if (!validate()) return;
-  setSubmitting(true);
+    e.preventDefault();
+    setServerError(null);
+    if (!validate()) return;
+    setSubmitting(true);
+    setIsWakingUp(false);
 
-  try {
-    await api.createMessage(formData);
-    setSubmitted(true);
-  } catch (error) {
-    console.error('Contact form error:', error);
+    const wakeTimer = setTimeout(() => {
+      setIsWakingUp(true);
+    }, 4000);
 
-    alert(
-      error instanceof Error
-        ? error.message
-        : 'Unable to send your message. Please try again.'
-    );
-  } finally {
-    setSubmitting(false);
-  }
-};
+    try {
+      await api.createMessage(formData);
+      setSubmitted(true);
+    } catch (error) {
+      console.error('Contact form error:', error);
+      setServerError(
+        error instanceof Error
+          ? error.message
+          : 'Unable to send your message. Please try again.'
+      );
+    } finally {
+      clearTimeout(wakeTimer);
+      setIsWakingUp(false);
+      setSubmitting(false);
+    }
+  };
 
   return (
     <>
@@ -90,6 +99,25 @@ const Contact = () => {
                 </div>
               ) : (
                 <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-sm p-8 space-y-5" noValidate>
+                  {serverError && (
+                    <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl p-4 flex items-start gap-3">
+                      <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                      <div className="flex-1">
+                        <p className="font-medium">Message Could Not Be Sent</p>
+                        <p className="mt-1 text-red-600">{serverError}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {isWakingUp && (
+                    <div className="bg-amber-50 border border-amber-200 text-amber-800 text-sm rounded-xl p-4 flex items-start gap-3">
+                      <Loader2 className="w-5 h-5 text-amber-600 animate-spin flex-shrink-0 mt-0.5" />
+                      <p>
+                        Connecting to backend server on Render... Waking up from sleep mode may take a few moments.
+                      </p>
+                    </div>
+                  )}
+
                   <div>
                     <label className="label-field" htmlFor="name">Name *</label>
                     <input id="name" type="text" className="input-field" value={formData.name} onChange={(e) => handleChange('name', e.target.value)} aria-invalid={!!errors.name} />

@@ -1,52 +1,54 @@
 import { useState } from 'react';
-import { api } from '@/lib/api';
-import { Link } from 'react-router-dom';
+import { api, setAuthSession } from '@/lib/api';
+import { Link, useNavigate } from 'react-router-dom';
 import { Lock, Mail, Eye, EyeOff, Loader2 } from 'lucide-react';
 import SEO from '@/components/SEO';
 
 const Login = () => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({ email: '', password: '', remember: false });
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [isWakingUp, setIsWakingUp] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
-      e.preventDefault();
+    e.preventDefault();
+    setError('');
 
-      setError('');
+    if (!formData.email || !formData.password) {
+      setError('Please enter both email and password.');
+      return;
+    }
 
-      if (!formData.email || !formData.password) {
-        setError('Please enter both email and password.');
-        return;
-      }
+    setSubmitting(true);
+    setIsWakingUp(false);
 
-      setSubmitting(true);
+    const wakeTimer = setTimeout(() => {
+      setIsWakingUp(true);
+    }, 4000);
 
-      try {
-        const data = await api.login(
-          formData.email,
-          formData.password
-        );
+    try {
+      const data = await api.login(
+        formData.email,
+        formData.password
+      );
 
-        localStorage.setItem('x_beauty_token', data.access_token);
-        localStorage.setItem(
-          'x_beauty_user',
-          JSON.stringify(data.user)
-        );
-
-        window.location.href = '/admin';
-      } catch (error) {
-        console.error('Login error:', error);
-
-        setError(
-          error instanceof Error
-            ? error.message
-            : 'Invalid email or password.'
-        );
-      } finally {
-        setSubmitting(false);
-      }
-    };
+      setAuthSession(data.access_token, data.user);
+      navigate('/admin');
+    } catch (err) {
+      console.error('Login error:', err);
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Invalid email or password.'
+      );
+    } finally {
+      clearTimeout(wakeTimer);
+      setIsWakingUp(false);
+      setSubmitting(false);
+    }
+  };
 
   return (
     <>
@@ -65,6 +67,15 @@ const Login = () => {
             {error && (
               <div className="bg-red-50 border border-red-100 text-red-600 text-sm rounded-lg p-4 mb-5">
                 {error}
+              </div>
+            )}
+
+            {isWakingUp && (
+              <div className="bg-amber-50 border border-amber-200 text-amber-800 text-sm rounded-lg p-4 mb-5 flex items-center gap-3">
+                <Loader2 className="w-5 h-5 text-amber-600 animate-spin flex-shrink-0" />
+                <p className="text-xs">
+                  Connecting to Render backend... Free tier service may take a moment to wake up.
+                </p>
               </div>
             )}
 

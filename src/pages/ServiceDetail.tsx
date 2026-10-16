@@ -1,5 +1,5 @@
 import { Link, useParams } from 'react-router-dom';
-import { Clock, ArrowRight, Check } from 'lucide-react';
+import { Clock, Check } from 'lucide-react';
 import SEO from '@/components/SEO';
 import PageHeader from '@/components/PageHeader';
 import CTASection from '@/components/CTASection';

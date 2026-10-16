@@ -1,10 +1,40 @@
+import { useState, useEffect } from 'react';
 import { Check, Sparkles } from 'lucide-react';
 import SEO from '@/components/SEO';
 import PageHeader from '@/components/PageHeader';
 import CTASection from '@/components/CTASection';
-import { offers } from '@/data/content';
+import { offers as defaultOffers } from '@/data/content';
+import { api } from '@/lib/api';
 
 const Offers = () => {
+  const [displayedOffers, setDisplayedOffers] = useState(defaultOffers);
+
+  useEffect(() => {
+    let isMounted = true;
+    api.getOffers()
+      .then((data) => {
+        if (!isMounted || !Array.isArray(data) || data.length === 0) return;
+        const mapped = data.map((o) => ({
+          title: o.title,
+          description: o.description || '',
+          price: o.price,
+          badge: o.badge || undefined,
+          features: o.features
+            ? o.features.split(',').map((f) => f.trim()).filter(Boolean)
+            : [],
+        }));
+        setDisplayedOffers(mapped);
+      })
+      .catch((err) => {
+        // Backend downtime must never crash the website, fallback to default content
+        console.warn('Could not load live offers from backend, using default data:', err);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   return (
     <>
       <SEO
@@ -20,7 +50,7 @@ const Offers = () => {
       <section className="section-pad">
         <div className="container-x">
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {offers.map((offer) => (
+            {displayedOffers.map((offer) => (
               <div
                 key={offer.title}
                 className="card p-7 flex flex-col relative hover:-translate-y-1"

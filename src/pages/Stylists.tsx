@@ -1,10 +1,44 @@
+import { useState, useEffect } from 'react';
 import SEO from '@/components/SEO';
 import PageHeader from '@/components/PageHeader';
 import StylistCard from '@/components/StylistCard';
 import CTASection from '@/components/CTASection';
-import { stylists } from '@/data/content';
+import { stylists as defaultStylists, type Stylist } from '@/data/content';
+import { api } from '@/lib/api';
 
 const Stylists = () => {
+  const [displayedStylists, setDisplayedStylists] = useState<Stylist[]>(defaultStylists);
+
+  useEffect(() => {
+    let isMounted = true;
+    api.getStylists()
+      .then((data) => {
+        if (!isMounted || !Array.isArray(data) || data.length === 0) return;
+        const mapped: Stylist[] = data.map((s, index) => {
+          const matchedDefault = defaultStylists.find(
+            (d) => d.name.toLowerCase() === s.name.toLowerCase()
+          );
+          return {
+            name: s.name,
+            specialty: s.specialty,
+            experience: s.experience || 'Experienced',
+            bio: s.bio || matchedDefault?.bio || 'Dedicated stylist at X Beauty.',
+            image: s.image && s.image.trim() !== ''
+              ? s.image
+              : (matchedDefault?.image || defaultStylists[index % defaultStylists.length].image),
+          };
+        });
+        setDisplayedStylists(mapped);
+      })
+      .catch((err) => {
+        console.warn('Could not load live stylists from backend, using default data:', err);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   return (
     <>
       <SEO
@@ -21,7 +55,7 @@ const Stylists = () => {
       <section className="section-pad">
         <div className="container-x">
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {stylists.map((s) => (
+            {displayedStylists.map((s) => (
               <StylistCard key={s.name} stylist={s} />
             ))}
           </div>

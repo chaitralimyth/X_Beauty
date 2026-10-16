@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { ArrowRight, Heart, Scissors, Sparkles, Users, Award } from 'lucide-react';
+import { ArrowRight, Heart, Scissors, Sparkles, Users } from 'lucide-react';
 import SEO from '@/components/SEO';
 import PageHeader from '@/components/PageHeader';
 import CTASection from '@/components/CTASection';

@@ -1,6 +1,5 @@
 import { MapPin, Phone, Clock } from 'lucide-react';
 import { business } from '@/data/content';
-import { Link } from 'react-router-dom';
 
 const LocationSection = () => {
   return (
