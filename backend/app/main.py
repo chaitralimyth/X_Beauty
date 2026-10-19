@@ -1,4 +1,3 @@
-import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -33,34 +32,13 @@ from .chakravyuh_integration import ChakravyuhSentinelMiddleware
 # Chakravyuh Sentinel Security Integration Layer
 app.add_middleware(ChakravyuhSentinelMiddleware)
 
-# CORS Configuration:
-# - Local development explicitly supports Vite & Next frontend origins (5173, 3000)
-# - Production origins are configurable via CORS_ORIGINS environment variable
-# - Never use "*" together with allow_credentials=True (prohibited by W3C CORS spec)
-DEFAULT_CORS_ORIGINS = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "https://x-beauty-41w61egzi-chaitralikaustubhmithbawkar-2222.vercel.app",
-]
-env_cors = os.getenv("CORS_ORIGINS", "")
-if env_cors.strip():
-    ALLOWED_CORS_ORIGINS = [
-        origin.strip()
-        for origin in env_cors.split(",")
-        if origin.strip() and origin.strip() != "*"
-    ]
-    if "https://x-beauty-41w61egzi-chaitralikaustubhmithbawkar-2222.vercel.app" not in ALLOWED_CORS_ORIGINS:
-        ALLOWED_CORS_ORIGINS.append("https://x-beauty-41w61egzi-chaitralikaustubhmithbawkar-2222.vercel.app")
-else:
-    ALLOWED_CORS_ORIGINS = DEFAULT_CORS_ORIGINS
-
+# Reflect each request's Origin so browsers can use credentialed requests.
+# A literal "*" cannot be used for credentialed CORS responses.
 # Outermost middleware handles CORS for browser clients
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ALLOWED_CORS_ORIGINS,
-    allow_origin_regex=r"^https://[a-zA-Z0-9_-]+\.vercel\.app$",
+    allow_origins=[],
+    allow_origin_regex=r".*",
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["*"],
