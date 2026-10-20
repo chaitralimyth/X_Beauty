@@ -6,7 +6,8 @@
  * and input sanitization matching backend contracts.
  */
 
-const RAW_API_URL = import.meta.env.VITE_API_BASE_URL;
+const RAW_API_URL =
+  import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL;
 
 export const API_BASE_URL = (
   RAW_API_URL && RAW_API_URL.trim() !== ''
@@ -382,7 +383,7 @@ export const api = {
       notes: data.notes && data.notes.trim() ? data.notes.trim() : null,
       consent: Boolean(data.consent),
     };
-    return request<AppointmentResponse>('/api/bookings', {
+    return request<AppointmentResponse>('/api/bookings/', {
       method: 'POST',
       body: JSON.stringify(sanitized),
     });

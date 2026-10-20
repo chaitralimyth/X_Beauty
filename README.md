@@ -13,7 +13,7 @@ Production backend deployed on Render:
 The frontend uses Vite and reads the backend base URL via:
 
 ```env
-VITE_API_BASE_URL=https://x-beauty-backend.onrender.com
+VITE_API_URL=https://x-beauty-backend.onrender.com
 ```
 
 ### Environment Files
@@ -23,9 +23,11 @@ VITE_API_BASE_URL=https://x-beauty-backend.onrender.com
 
 ### Production Deployment on Vercel
 In the Vercel Project Dashboard (`Settings` -> `Environment Variables`):
-- **Key**: `VITE_API_BASE_URL`
+- **Key**: `VITE_API_URL`
 - **Value**: `https://x-beauty-backend.onrender.com`
 - **Environments**: Production, Preview, Development
+
+`VITE_API_BASE_URL` remains supported as a compatibility fallback for existing deployments.
 
 > **Security Note**: Never expose backend secrets, database passwords, or JWT keys in client-side environment variables. Only the public API base URL is exposed to the browser.
 
@@ -68,13 +70,7 @@ Features include:
 
 ## 4. Backend CORS Configuration on Render
 
-The backend FastAPI service uses `CORSMiddleware`.
-
-To ensure browser requests from the Vercel deployment are permitted, configure the environment variable in the Render Dashboard (`x-beauty-backend` -> `Environment`):
-
-```env
-CORS_ORIGINS=https://x-beauty-41w61egzi-chaitralikaustubhmithbawkar-2222.vercel.app,http://localhost:5173,http://localhost:3000
-```
+The backend FastAPI service uses `CORSMiddleware` and accepts browser requests from any origin, including credentialed requests. No `CORS_ORIGINS` environment variable is required.
 
 Additionally, `vercel.json` provides a reverse proxy rewrite `/api/:path*` to `https://x-beauty-backend.onrender.com/api/:path*` for seamless fallback routing without CORS restrictions.
 

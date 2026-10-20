@@ -126,6 +126,27 @@ class TestXBeautyHardening(unittest.TestCase):
             mock_ingest.assert_awaited_once()
         print("PASS: Pre-route active block enforcement verified.")
 
+    def test_5_booking_post_accepts_both_slash_variants(self):
+        """Verify both frontend-compatible booking URLs reach body validation."""
+        with (
+            patch(
+                "app.chakravyuh_integration._client.check_ip",
+                new_callable=AsyncMock,
+                return_value={"blocked": False, "action": "ALLOW"},
+            ),
+            patch(
+                "app.chakravyuh_integration._client.ingest_traffic",
+                new_callable=AsyncMock,
+                return_value={"success": True, "action": "ALLOW"},
+            ),
+        ):
+            for path in ("/api/bookings", "/api/bookings/"):
+                with self.subTest(path=path):
+                    resp = self.client.post(path, json={})
+                    self.assertEqual(resp.status_code, 422)
+
+        print("PASS: Booking POST works with or without a trailing slash.")
+
 
 if __name__ == "__main__":
     unittest.main()

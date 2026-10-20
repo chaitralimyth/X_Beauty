@@ -17,6 +17,11 @@ router = APIRouter(
 
 
 @router.post(
+    "/",
+    response_model=AppointmentResponse,
+    include_in_schema=False
+)
+@router.post(
     "",
     response_model=AppointmentResponse
 )

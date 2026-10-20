@@ -11,6 +11,7 @@ unified security pipeline:
 """
 
 import os
+import logging
 import time
 import urllib.parse
 from datetime import datetime, timezone
@@ -20,6 +21,8 @@ import httpx
 from fastapi import Request
 from fastapi.responses import JSONResponse, Response
 from starlette.middleware.base import BaseHTTPMiddleware
+
+logger = logging.getLogger(__name__)
 
 # Configuration via environment variables
 CHAKRAVYUH_API_BASE_URL = os.getenv("CHAKRAVYUH_API_BASE_URL", "http://127.0.0.1:8000").rstrip("/")
@@ -175,8 +178,12 @@ class ChakravyuhClient:
         url = f"{self.base_url}/api/ingest-traffic"
         async with httpx.AsyncClient(timeout=self.timeout) as client:
             res = await client.post(url, json=payload)
-            if res.status_code == 200:
+            if res.is_success:
                 return res.json()
+            logger.warning(
+                "Sentinel traffic ingestion returned HTTP %s",
+                res.status_code,
+            )
             return {
                 "success": False,
                 "status_code": res.status_code,
@@ -364,6 +371,9 @@ class ChakravyuhSentinelMiddleware(BaseHTTPMiddleware):
         except Exception as ingest_err:
             # Graceful failure handling without leaking internals or credentials
             # When fail-open is configured, X Beauty traffic continues safely
-            pass
+            logger.warning(
+                "Sentinel traffic ingestion failed; continuing fail-open (%s)",
+                type(ingest_err).__name__,
+            )
 
         return new_response
