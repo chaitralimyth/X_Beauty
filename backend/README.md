@@ -20,8 +20,9 @@ Activate virtual environment:
 
 ## Render deployment
 
-Set `CHAKRAVYUH_API_BASE_URL` on the X-Beauty Render service to the root URL of
-the deployed Sentinel API. The integration sends telemetry to
+Set `CHAKRAVYUH_API_BASE_URL=https://chakravyuh-sentinel-web.onrender.com` on
+the X-Beauty Render service. This is the root URL of the deployed Sentinel API;
+the integration sends telemetry to
 `/api/ingest-traffic`; do not include that path in the environment variable.
 Without this setting, the backend defaults to `http://127.0.0.1:8000`, which
 does not reach a separate Sentinel service from Render.
