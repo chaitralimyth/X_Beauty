@@ -1,3 +1,4 @@
+from .sqli_defense import check_sqli_attack
 """
 Chakravyuh Sentinel Security Integration Layer for X Beauty Backend
 
@@ -305,6 +306,46 @@ class ChakravyuhSentinelMiddleware(BaseHTTPMiddleware):
         request_path = request.url.path
         request_size = self._content_length(request.headers)
         query_string = request.url.query or ""
+
+        # -------------------------------------------------------------
+        # STEP 0: Pre-Route SQL Injection Attack Interception
+        # -------------------------------------------------------------
+        sqli_pattern = check_sqli_attack(query_string) or check_sqli_attack(request_path)
+        if not sqli_pattern and request.method in ("POST", "PUT", "PATCH"):
+            content_type = request.headers.get("content-type", "")
+            if "application/json" in content_type:
+                try:
+                    body_bytes = await request.body()
+                    if body_bytes:
+                        import json
+                        body_data = json.loads(body_bytes.decode("utf-8", errors="ignore"))
+                        sqli_pattern = check_sqli_attack(body_data)
+                except Exception:
+                    pass
+
+        if sqli_pattern:
+            _BLOCKED_IPS_CACHE.add(client_ip)
+            response = JSONResponse(
+                status_code=403,
+                content={
+                    "detail": "Forbidden: SQL injection payload detected and rejected by Sentinel policy",
+                    "security_action": "BLOCK",
+                    "ip": client_ip,
+                    "matched_pattern": sqli_pattern,
+                },
+                headers={"X-Sentinel-Action": "BLOCK"},
+            )
+            payload = self._telemetry_payload(
+                ip=client_ip,
+                method=request.method,
+                endpoint=request_path,
+                status_code=response.status_code,
+                request_size=request_size,
+                response_size=self._content_length(response.headers),
+                response_time_ms=0,
+                query_string=query_string,
+            )
+            return self._attach_telemetry(response, payload)
 
         # -------------------------------------------------------------
         # STEP 1: Pre-check IP Block & Rate-limit status (PRE-ROUTE)

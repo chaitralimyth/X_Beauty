@@ -87,10 +87,9 @@ def search_bookings_post(
     search: SearchRequest,
     db: Session = Depends(get_db)
 ):
-    # VULNERABILITY: Direct string interpolation of JSON payload into raw SQL query
-    query = text(f"SELECT * FROM appointments WHERE stylist = '{search.stylist}'")
-    
-    result_rows = db.execute(query).fetchall()
+    # Safe parameterized query: user input is strictly bound as a query parameter
+    query = text("SELECT * FROM appointments WHERE stylist = :stylist")
+    result_rows = db.execute(query, {"stylist": search.stylist}).fetchall()
 
     if not result_rows:
         return []
@@ -109,14 +108,22 @@ def search_bookings_post(
     response_model=AppointmentResponse
 )
 def get_booking(
-    booking_id: str,  # Changed to str to allow SQL injection payloads
+    booking_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    # VULNERABILITY: Direct string interpolation into raw SQL
-    query = text(f"SELECT * FROM appointments WHERE id = {booking_id}")
-    
-    result = db.execute(query).first()
+    # Strict numeric validation prevents SQL injection payloads in path parameter
+    try:
+        int_id = int(booking_id)
+    except (ValueError, TypeError):
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid booking ID: numeric identifier required"
+        )
+
+    # Safe parameterized query
+    query = text("SELECT * FROM appointments WHERE id = :booking_id")
+    result = db.execute(query, {"booking_id": int_id}).first()
 
     if not result:
         raise HTTPException(
