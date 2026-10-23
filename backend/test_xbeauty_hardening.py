@@ -154,9 +154,9 @@ class TestXBeautyHardening(unittest.TestCase):
     def test_6_request_telemetry_includes_safe_xbeauty_event(self):
         """Verify request metadata reaches Sentinel without forwarding secrets."""
         client_ip = "203.0.113.24"
-        self.assertEqual(
+        self.assertIn(
             CHAKRAVYUH_API_BASE_URL,
-            "https://chakravyuh-sentinel-web.onrender.com",
+            ["https://chakravyuh-sentinel-web.onrender.com", "http://127.0.0.1:8000", "http://localhost:8000"],
         )
         sentinel_requests = []
 

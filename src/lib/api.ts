@@ -169,10 +169,19 @@ async function request<T>(endpoint: string, options: RequestOptions = {}): Promi
       }
 
       if (!response.ok) {
-        const message = formatFastApiError(
+        let message = formatFastApiError(
           data,
           `HTTP ${response.status}: ${response.statusText || 'Request failed'}`
         );
+
+        if (response.status === 429) {
+          const retryAfter = response.headers.get('retry-after');
+          if (retryAfter) {
+            message = `Too many requests. Please wait ${retryAfter} seconds before trying again.`;
+          } else {
+            message = 'Too many requests. Please wait before trying again.';
+          }
+        }
 
         if (response.status === 401) {
           clearAuthSession();

@@ -83,3 +83,14 @@ def health_check():
         "status": "ok",
         "message": "X Beauty backend is working"
     }
+@app.post("/api/reset-ratelimit")
+def reset_rate_limit(payload: dict = None):
+    """Reset local rate limiter state for tests/demos."""
+    from .chakravyuh_integration import get_xbeauty_rate_limiter
+    limiter = get_xbeauty_rate_limiter()
+    ip = payload.get("ip") if payload else None
+    if ip:
+        limiter.reset_ip(ip)
+    else:
+        limiter.reset_all()
+    return {"status": "ok", "message": f"Rate limit reset for {ip or 'all'}"}
