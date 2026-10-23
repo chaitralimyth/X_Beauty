@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 
@@ -15,6 +16,10 @@ router = APIRouter(
     prefix="/api/bookings",
     tags=["Bookings"]
 )
+
+# Schema for the vulnerable POST search request
+class SearchRequest(BaseModel):
+    stylist: str
 
 
 @router.post(
@@ -71,6 +76,34 @@ def get_bookings(
     ).all()
 
 
+# ==========================================
+# INTENTIONALLY VULNERABLE POST ENDPOINT (SQLi via JSON Body)
+# ==========================================
+@router.post(
+    "/search",
+    response_model=list[AppointmentResponse]
+)
+def search_bookings_post(
+    search: SearchRequest,
+    db: Session = Depends(get_db)
+):
+    # VULNERABILITY: Direct string interpolation of JSON payload into raw SQL query
+    query = text(f"SELECT * FROM appointments WHERE stylist = '{search.stylist}'")
+    
+    result_rows = db.execute(query).fetchall()
+
+    if not result_rows:
+        return []
+
+    appointment_ids = [row[0] for row in result_rows]
+    appointments = db.query(Appointment).filter(Appointment.id.in_(appointment_ids)).all()
+    
+    return appointments
+
+
+# ==========================================
+# INTENTIONALLY VULNERABLE GET ENDPOINT (SQLi via Path Parameter)
+# ==========================================
 @router.get(
     "/{booking_id}",
     response_model=AppointmentResponse
@@ -80,7 +113,7 @@ def get_booking(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    # INTENTIONALLY VULNERABLE: Direct string interpolation into raw SQL
+    # VULNERABILITY: Direct string interpolation into raw SQL
     query = text(f"SELECT * FROM appointments WHERE id = {booking_id}")
     
     result = db.execute(query).first()
@@ -91,7 +124,6 @@ def get_booking(
             detail="Appointment not found"
         )
 
-    # Fetch the actual appointment model using the resolved ID from the raw query
     appointment = db.query(Appointment).filter(Appointment.id == result[0]).first()
     return appointment
 
