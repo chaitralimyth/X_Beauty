@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 
 from .auth import get_current_user
 from .database import get_db
@@ -75,22 +76,23 @@ def get_bookings(
     response_model=AppointmentResponse
 )
 def get_booking(
-    booking_id: int,
+    booking_id: str,  # Changed to str to allow SQL injection payloads
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    appointment = db.query(
-        Appointment
-    ).filter(
-        Appointment.id == booking_id
-    ).first()
+    # INTENTIONALLY VULNERABLE: Direct string interpolation into raw SQL
+    query = text(f"SELECT * FROM appointments WHERE id = {booking_id}")
+    
+    result = db.execute(query).first()
 
-    if not appointment:
+    if not result:
         raise HTTPException(
             status_code=404,
             detail="Appointment not found"
         )
 
+    # Fetch the actual appointment model using the resolved ID from the raw query
+    appointment = db.query(Appointment).filter(Appointment.id == result[0]).first()
     return appointment
 
 
